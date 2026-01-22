@@ -58,18 +58,46 @@ const ContactSection = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    toast({
-      title: isRTL ? 'تم الإرسال بنجاح' : 'Message Sent!',
-      description: isRTL 
-        ? 'سنتواصل معك قريباً' 
-        : 'We will get back to you soon.',
-    });
-    
-    setFormData({ fullName: '', mobile: '', address: '', message: '' });
-    setIsSubmitting(false);
+    try {
+      // Submit to database via REST API (avoids TypeScript issues with unsynced types)
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/booking_requests`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            full_name: formData.fullName,
+            mobile: formData.mobile,
+            address: formData.address,
+            message: formData.message || null,
+          }),
+        }
+      );
+
+      if (res.ok) {
+        toast({
+          title: isRTL ? 'تم الإرسال بنجاح' : 'Message Sent!',
+          description: isRTL 
+            ? 'سنتواصل معك قريباً' 
+            : 'We will get back to you soon.',
+        });
+        setFormData({ fullName: '', mobile: '', address: '', message: '' });
+      } else {
+        throw new Error('Failed to submit');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'خطأ' : 'Error',
+        description: isRTL ? 'فشل في الإرسال. حاول مرة أخرى.' : 'Failed to submit. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const openMaps = () => {
